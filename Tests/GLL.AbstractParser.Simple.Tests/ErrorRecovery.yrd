@@ -1,0 +1,3 @@
+[<Start>]
+s: (expr SEP)*
+expr: (NUM (OP NUM)*) | ERR*

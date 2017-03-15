@@ -21,9 +21,10 @@ let grammarFilesPath = @"C:/Code/YaccConstructor/tests/GLLParser.Simple.Tests/"
 //let outDir = @"../../../src/GLLParser.SimpleTest/"
 
 let getTokens path =
-    System.IO.File.ReadAllText(inputFilesPath + path)
-        .Split([|' '|])
-        |> Array.filter ((<>) "")
+    let text = System.IO.File.ReadAllText(inputFilesPath + path)
+    let s = text.Split([|' '; '\r'; '\n' |], System.StringSplitOptions.RemoveEmptyEntries); 
+    s
+       
 
 let getLinearInput path (stringToToken : string -> int<token>) = 
     new LinearInput(
@@ -51,6 +52,16 @@ let runTest grammarFile inputFile =
     let res = isParsed parser input
     shouldBeTrue res
 
+
+let getInputWithErrorNodes path  (stringToToken : string -> int<token>) = 
+    new LinearIputWithErrorConsidering<string>(getTokens path,stringToToken, "ERR")
+
+let runTestErrorConsidering grammarFile inputFile =
+    let parser = getParserSource grammarFile
+    let input = getInputWithErrorNodes inputFile parser.StringToToken
+    let res = AbstractParser.isParsedConsideringErrors parser input
+    Assert.IsTrue(res, "Not passed")
+   
 [<TestFixture>]
 type ``GLL parser tests with simple lexer`` () =
 
@@ -166,3 +177,17 @@ type ``GLL parser tests with simple lexer`` () =
     member test.``Pretty simple calc seq input``() =
         runTest "PrettySimpleCalc.yrd" "PrettyCalc1.txt"
    
+    
+
+    [<Test>]
+    member test.``Error recovery simple test``() =
+        runTestErrorConsidering "ErrorRecovery.yrd" "ErrorRecoverySimple.txt" 
+
+    [<Test>]
+    member test.``Error recovery test with errors``() =
+        runTestErrorConsidering "ErrorRecovery.yrd" "ErrorRecoveryWithErros.txt" 
+   
+    [<Test>]
+    [<MaxTime(5000)>]
+    member test.``Error recovery huge input``() =
+        runTestErrorConsidering "ErrorRecovery.yrd" "ErrorRecoveryHuge.txt" 

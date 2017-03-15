@@ -79,3 +79,14 @@ type SimpleGraphInput<'tagType> (initialPositions, getTokenFromTag:'tagType -> i
                 (fun e ->
                     pFun (getTokenFromTag e.Tag) (e.Target * 1<positionInInput>)
                 )
+
+type LinearIputWithErrorConsidering<'tagType>(input: 'tagType array, getTokenFromTag: 'tagType -> int<token>, errorTag: 'tagType) as this = 
+    inherit SimpleGraphInput<'tagType>([|0<positionInInput>|], getTokenFromTag)
+    let edge from value =
+        new QuickGraph.TaggedEdge<int, 'tagType> (from, (from + 1), value)
+    do input
+        |> Seq.mapi (fun i t -> [edge i t; edge i errorTag])
+        |> Seq.concat
+        |> this.AddVerticesAndEdgeRange
+        |> ignore
+        

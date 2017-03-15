@@ -176,6 +176,11 @@ let isParsed (parser : ParserSourceGLL) (input : LinearInput) =
     findVertices gss parser.StartState
     |> Seq.exists (fun v -> v.P |> ResizeArray.exists (fun p -> int p.posInInput = input.Input.Length))
 
+let isParsedConsideringErrors (parser : ParserSourceGLL) (input : SimpleGraphInput<_>) = 
+    let gss = parse parser input false
+    findVertices gss parser.StartState
+    |> Seq.exists (fun v -> v.P |> ResizeArray.exists (fun p -> int p.posInInput = input.VertexCount - 1))
+
 let getAllRangesForState gss state =
     findVertices gss state
     |> Seq.collect (fun v -> v.U |> Seq.collect (fun kvp -> kvp.Value |> Seq.map (fun x -> v.PositionInInput, v.GetUncompressetPositions kvp.Key |> fst)))    
