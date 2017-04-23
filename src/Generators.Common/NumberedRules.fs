@@ -53,7 +53,7 @@ type NumberedRules (ruleList : Rule.t<Source.t,Source.t> list, indexator : Index
                 res := true
         !res
 
-    let ruleToString (rule : Rule.t<Source.t,Source.t>)=
+    let rightSideToString (rule : Rule.t<Source.t,Source.t>)=
         let rec traverse = function
             | PRef (nTerm,_) -> nTerm.text
             | PToken token   -> token.text
@@ -62,8 +62,8 @@ type NumberedRules (ruleList : Rule.t<Source.t,Source.t> list, indexator : Index
             | _ -> failwith "Unexpected construction in grammar"
         traverse rule.body
 
-    let stringifiedRules = 
-        rules |> Array.mapi (fun i r -> ruleToString r, i) |> dict
+    let rulesInfo' = 
+        rules |> Array.mapi (fun i r -> i, left.[i], left.[i] |> indexator.indexToNonTerm, rightSideToString r) 
         
     member this.rulesCount = rules.Length
     member this.startRule = start
@@ -77,4 +77,4 @@ type NumberedRules (ruleList : Rule.t<Source.t,Source.t> list, indexator : Index
     member this.symbol rule pos = right.[rule].[pos]
     member this.rulesWithLeftSide symbol = rulesWithLeft.[symbol]
     member this.errorRulesExists = errRulesExists
-    member this.rightSideToRule rightSide = stringifiedRules.[rightSide]
+    member this.rulesInfo = rulesInfo'

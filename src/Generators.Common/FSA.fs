@@ -10,13 +10,17 @@ open Yard.Generators.Common.Epsilon
 open Yard.Generators.Common.SymbolSets
 open Yard.Generators.Common
 
-type FSA(ruleList : Rule.t<Source.t,Source.t> list) =
+type FSA(ruleList : Rule.t<Source.t,Source.t> list, ?needTransalte : bool) =
+    let minimizeIfNeed =
+       let needMinimize = needTransalte |> Option.fold (fun _ x -> x) false |> not
+       printfn "Minimized %A" needMinimize
+       if needMinimize then minimizeFSA else id
     let fsa =
         ruleList
         |> convertRulesToFSA  |> printDot @".\FSA1initialFSA.dot"
         |> removeEpsilonEdges //|> printDot @".\FSA2withoutEpsilon.dot"
         |> toDFA              //|> printDot @".\FSA3determ.dot"
-        |> minimizeFSA        |> printDot @"FSA4minimized.dot"
+        |> minimizeIfNeed        |> printDot @"FSA4minimized.dot"
     //let firstSet = genFirstSet fsa
 
     member this.States = fsa.States

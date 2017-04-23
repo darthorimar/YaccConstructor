@@ -108,45 +108,102 @@ let inline getLeftExtension (long : int64<extension>)  = int <| ((int64 long) >>
 let inline getRule packedValue = int packedValue >>> 16
 let inline getPosition (packedValue : int) = int (packedValue &&& 0xffff)
 
-let gllNodeToGlr (node: INode) rightToRule intToString termToIndex =
-    let rec handleNode (node : INode) =
-        match node with
-        | :? EpsilonNode -> 
-            new AstNode.Epsilon(-1) :> AstNode.AstNode |> Some
-        | :? TerminalNode as term ->
-            new AstNode.Terminal(termToIndex term) :> AstNode.AstNode |> Some
-        | :? NonTerminalNode as nonTerm ->
-            let children = collectChildren nonTerm.First
-            let childToString (child : INode) =
-                 match child with
-                 | :? TerminalNode as term -> intToString <| int term.Name
-                 | :? NonTerminalNode as nonTerm -> intToString <| int nonTerm.Name
-            let childrenString = children |> Seq.map childToString |> String.concat " "
-            if Seq.isEmpty children
-            then
-                None
-            else
-                let nodes = new AstNode.Nodes(children |> Seq.map handleNode |> Seq.choose id |> Array.ofSeq)
-                let family = new AstNode.Family(rightToRule childrenString, nodes)
-                new AstNode.AST (Array.singleton <| family) :> AstNode.AstNode |>Some 
-        | other -> failwith <| sprintf "Can not handle %A node" other
-    and collectChildren (node: INode) =
+let gllNodeToGlr (node: INode) rulesInfo intToString termToIndex =
+    let createAst nonTermIndex nodeList = 
+        let nodes = new AstNode.Nodes(nodeList |> Array.ofSeq)
+        let family = new AstNode.Family(nonTermIndex, nodes)
+        new AstNode.AST (Array.singleton family) :> AstNode.AstNode
+    let startRuleNum = 
+        rulesInfo
+        |> Array.find (fun(_,_,n,_) -> n = "yard_start_rule")
+        |> fun (i,_,_,_) -> i
+    let ruleNum = 
+        let dict = 
+            rulesInfo
+            |> Array.map (fun (i, _ , l, r) -> sprintf "%s = %s" l r, i)
+            |> dict
+        fun rule -> dict.[rule]
+    let leftNum = 
+        let dict = 
+            rulesInfo
+            |> Array.map (fun (i, j, _, _) -> i, j)
+            |> dict
+        fun rule -> dict.[rule]
+
+    let rec collectChildren (node: INode) =
         match node with
         | :? PackedNode as packed -> 
-            Seq.append <|| (collectChildren packed.Left, collectChildren packed.Right)                
+            List.append <|| (collectChildren packed.Left, collectChildren packed.Right)                
         | :? IntermidiateNode as inter ->
-            inter.MapChildren collectChildren|> Seq.concat        
+            inter.First |> collectChildren        
         | :? TerminalNode as term ->
             if int term.Name = -1
-            then Seq.empty
-            else term :> INode |> Seq.singleton
-        | :? EpsilonNode ->
-            Seq.empty 
-        | otherNode -> Seq.singleton otherNode
+            then List.empty
+            else term :> INode |> List.singleton
+        | :? EpsilonNode as eps->
+            eps :> INode |> List.singleton 
+        | otherNode -> List.singleton otherNode
+        
+    let cache = new Collections.Generic.Dictionary<INode, AstNode.AstNode>()
 
-    match handleNode node with
-        | Some converted -> converted
-        | None           -> failwith "Start rule can not be anepsilon rule"
+    let rec handleNode parentNonTerm (node : INode) =
+        let convertNode (node : INode) =
+            match node with
+            | :? EpsilonNode as eps-> 
+                new AstNode.Epsilon(-(leftNum parentNonTerm) - 1) :> AstNode.AstNode |> Some
+            | :? TerminalNode as term ->
+                new AstNode.Terminal(termToIndex term) :> AstNode.AstNode |> Some
+            | :? NonTerminalNode as nonTerm ->
+                let childToString (child : INode) =
+                        match child with
+                        | :? TerminalNode as term       -> int term.Name |> intToString |> Some
+                        | :? NonTerminalNode as nonTerm -> int nonTerm.Name |> intToString |> Some
+                        | :? EpsilonNode                -> None
+                let children = collectChildren nonTerm.First
+                let rightSide = children |> List.map childToString |> List.choose id |> String.concat " "
+                let leftSide = intToString <| int nonTerm.Name
+                let childrenString = sprintf "%s = %s" leftSide rightSide
+                let nonTermIndex = ruleNum childrenString
+
+                if Seq.isEmpty children
+                then
+                    None
+                else 
+                    let node = 
+                        let handledNodes =
+                            children
+                            |> List.map (handleNode nonTermIndex)
+                            |> List.choose id
+                        let withouLastEps nodes = 
+                             List.foldBack (fun n (s,b) -> if AstNode.isEpsilon n && b then s, true else (n::s, false)) nodes (List.empty, true)
+                             |> fst
+                        let onlyOneEps = 
+                            handledNodes |> List.length = 1
+                            && handledNodes |> List.head |> AstNode.isEpsilon
+                        let nodes =
+                            if onlyOneEps
+                            then handledNodes
+                            else handledNodes |> withouLastEps
+                        if not onlyOneEps
+                        then createAst nonTermIndex nodes
+                        else nodes |> List.head 
+                    node |> Some
+            | other -> failwith <| sprintf "Can not handle %A node" other
+
+        if cache.ContainsKey node
+        then cache.[node] |> Some
+        else
+            match convertNode node with
+            | Some converted ->
+                cache.[node] <- converted
+                converted |> Some
+            | None -> None
+
+    let root =
+        match handleNode startRuleNum node with
+            | Some converted -> converted
+            | None           -> failwith "Start rule can not be an epsilon rule"
+    createAst startRuleNum <| Seq.singleton root
 
 [<Struct>]
 type NumNode<'vtype> =
@@ -159,7 +216,7 @@ type TranslateArguments<'Token, 'Position, 'Result> = {
     zeroPosition : 'Position
     createErrorToken : ('Token -> 'Token) option
     intToString : int -> string
-    rightToRule : string -> int
+    rulesInfo : (int * int * string * string) array
     rules : int array array
     translate : AST.TranslateArguments<'Token, 'Position> -> AST.Tree<'Token> -> AST.ErrorDictionary<'Token>  -> 'Result
     withErrors : bool
@@ -654,11 +711,18 @@ type Tree<'TokenType> (roots : INode[], unpackPos) =
                 tokens
                 |> Array.map handleToken
                 |> Array.concat
+
             new AST.Tree<_>(tokensWithErrors, root, arguments.rules)
 
         let root = this.SelectBiggestRoot()
-        let glrRoot = gllNodeToGlr root arguments.rightToRule arguments.intToString termToIndex 
+        let glrRoot = gllNodeToGlr root arguments.rulesInfo arguments.intToString termToIndex
         let glrTree = toRnglTree glrRoot
+
+//        glrTree.ChooseLongestMatch()
+        printfn "\n\nGLL2GLR:"
+        let str = glrTree.StringRepr()
+        printf "%s" str
+        printfn "----"
 
         let translateArgs : AST.TranslateArguments<_,_> = {        
             tokenToRange = arguments.tokenToRange

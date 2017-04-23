@@ -44,7 +44,7 @@ type GLL() =
             let mutable tokenType = getOption "token" definition.tokens mapFromType
             //let mutable fullPath = getBoolOption "fullpath" false
             let mutable positionType = getOption "pos" "" id
-            //let mutable needTranslate = getBoolOption "translate" false
+            let mutable needTranslate = getBoolOption "translate" false
             let mutable light = getBoolOption "light" true
             //let mutable printInfiniteEpsilonPath = getOption "infEpsPath" "" id
             //let mutable isAbstract = getBoolOption "abstract" true
@@ -66,14 +66,15 @@ type GLL() =
                 | "-o" -> if value.Trim() <> "" then outFileName <- value
                 | "-output" -> if value.Trim() <> "" then outFileName <- value
                 //| "-fullpath" -> fullPath <- getBoolValue "fullPath" value
-                //| "-translate" -> needTranslate <- getBoolValue "translate" value
+                | "-translate" -> needTranslate <- getBoolValue "translate" value
                 | "-light" -> light <- getBoolValue "light" value
                 //| "-infEpsPath" -> printInfiniteEpsilonPath <- value
                 //| "-abstract" -> isAbstract <- getBoolValue "abstract" value
                 //| "-withoutTree" -> withoutTree := getBoolValue "withoutTree" value
+
                 | value -> failwithf "Unexpected %s option" value
                  
-            let fsa = new FSA(definition.grammar.[0].rules)
+            let fsa = new FSA(definition.grammar.[0].rules, needTranslate)
             
             let generatedCode, parserSource = getGLLparserSource fsa outFileName tokenType moduleName light generateToFile//isAbstract
             

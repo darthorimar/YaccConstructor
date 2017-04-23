@@ -122,7 +122,7 @@ type RNGLR() =
             
 //            if !needHighlighting 
 //            then newDefinition <- highlightingConvertions newDefinition
-
+//            printfn "New grammar RNGLR: %A" newDefinition.grammar.[0].rules
             let grammar = new FinalGrammar(newDefinition.grammar.[0].rules, caseSensitive)
 
             if !needHighlighting
@@ -142,6 +142,8 @@ type RNGLR() =
                         printf "%s " <| printSymbol (grammar.rules.symbol i j)
                     printfn ""
             printRules ()
+
+            printfn "Rules custom %A" grammar.rules.rulesInfo
 
             if grammar.EpsilonCyclicNonTerms.Length > 0 then
                 eprintfn "Grammar contains non-terminals, which can infinitely infer epsilon:"

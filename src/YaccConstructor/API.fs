@@ -170,6 +170,7 @@ let prepareGrammarFromFile frontendName grammarFile userDefs =
     (frontend, ilTree)
 
 let prepareResultForGeneration (frontend, ilTree) generatorName generatorParams conversions = 
+    printfn "Params"
     applyConversions ilTree frontend conversions
     let generator = prepareGenerator generatorName
     checkIlTree ilTree generator

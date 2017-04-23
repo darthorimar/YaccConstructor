@@ -1,4 +1,9 @@
 [<Start>]
-s: m | s1=e PLUS s2=e {s1 + " + " + s2}
-e: m | ERROR{"ERR"}
-m: n=NUM TIMES e=m {n + " * " + e} | NUM
+s: m | ERROR*{"ERR"} | s1=(m | ERROR*{"ERR"}) PLUS s2=s {s1 + " + " + s2} 
+m: n=NUM TIMES e=m {n + " * " + e} | NUM 
+//s: a1=a a2=b a3=a a4=b {a1+" "+a2+" "+a3+" "+a4}
+//a: {"EPSA"} | A 
+//b: {"EPSB"} | B 
+e: ERROR{"ERR"}
+
+

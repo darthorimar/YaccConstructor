@@ -777,6 +777,21 @@ type Tree<'TokenType> (tokens : array<'TokenType>
             | _ -> failwith ""
         printAst 0 root
 
+    member this.StringRepr( ) =
+        let indent i = String.replicate (i*2) " "
+        let rec handleNode (node : AstNode) i =
+            match node with
+            | :? Epsilon as eps-> sprintf "%sEPS(%i)\n" <| indent i <| eps.EpsilonNonTerm
+            | :? Terminal as t -> sprintf "%sT(%i)\n" <| indent i <| t.TokenNumber
+            | :? AST as ast ->
+                let handleFamily(family : Family) = 
+                    let nodesStringified = family.nodes.map (fun n -> handleNode n <| i + 2) |> String.concat ""
+                    sprintf "%sF(%i):\n%s" <| indent (i + 1) <| family.prod <| nodesStringified
+                let familiesStringified = ast.map handleFamily |> String.concat ""
+                sprintf "%sAST:\n%s" <| indent i <| familiesStringified
+        handleNode this.Root 0
+
+
     /// <summary>
     /// Returns tree which contains some unprocessed tokens. 
     /// Uses in highlighting.

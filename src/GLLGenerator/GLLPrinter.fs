@@ -244,16 +244,17 @@ let getGLLparserSource (fsa : FSA)
     for numberNonterm in sortedStateToNontermName do
         intToString.Add(int numberNonterm.Key, numberNonterm.Value)
 
-    let rightSideToRule = 
+    let rulesInfo = 
         try
             let newRuleList = fsa.RuleList |> convertRules
             let indexator = new Indexator(newRuleList, true)
             let numberredRules = new NumberedRules(newRuleList, indexator, true)
-            numberredRules.rightSideToRule
+//            printfn "New Grammar GLL %A" newRuleList;
+            numberredRules.rulesInfo
         with
             | ex ->
                 printfn "It would not be possible to use translation because not having some necessary conversions in grammar"
-                fun _ -> failwith "Bad grammar"
+                Array.empty
     let parserSource = new ParserSourceGLL(fsaStatesOutNonterms
                                          , fsa.StartState
                                          , fsa.FinalStates
@@ -264,7 +265,7 @@ let getGLLparserSource (fsa : FSA)
                                          , stateAndTokenToNewState
                                          , stringToToken
                                          , multipleInEdges
-                                         , rightSideToRule=rightSideToRule)
+                                         , rulesInfo=rulesInfo)
 
 
     res, parserSource
