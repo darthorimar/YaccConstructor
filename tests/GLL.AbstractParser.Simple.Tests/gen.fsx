@@ -15,11 +15,12 @@ module GLLAbstractParserSimpleTests =
     let meta = new ExpandMeta()
 
     let generate() = 
-        let ilFirst = fe.ParseGrammar "GPPerf1.yrd"
+        let ilFirst = fe.ParseGrammar "StaticAnalysisV.yrd"
         {ilFirst with grammar = meta.ConvertGrammar(ilFirst.grammar)}
-        let ilSecond = fe.ParseGrammar "GPPerf2.yrd"
-        {ilSecond with grammar = meta.ConvertGrammar(ilSecond.grammar)}
-        gen.Generate(ilFirst, true, "-pos int -token int -module GLL.GPPerf1  -o GPPerf1.yrd.fs") |> ignore
-        gen.Generate(ilSecond, true, "-pos int -token int -module GLL.GPPerf2  -o GPPerf2.yrd.fs")
+        gen.Generate(ilFirst, true, "-pos int -token int -module GLL.StaticAnalysisV -o StaticAnalysisV.yrd.fs") |> ignore
+        
+        let ilSecond = fe.ParseGrammar "StaticAnalysisM.yrd"
+        {ilSecond with grammar = meta.ConvertGrammar(ilFirst.grammar)}
+        gen.Generate(ilSecond, true, "-pos int -token int -module GLL.StaticAnalysisM -o StaticAnalysisM.yrd.fs") |> ignore
 
 GLLAbstractParserSimpleTests.generate()

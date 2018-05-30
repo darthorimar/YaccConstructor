@@ -1,0 +1,3 @@
+[<Start>]
+m : ND v D {""}
+v : (m? NA)* m? (A m?)* {""}
